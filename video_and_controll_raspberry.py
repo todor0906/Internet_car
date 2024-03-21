@@ -6,7 +6,7 @@ import threading
 import tkinter as tk
 
 def receive_video(HOST, PORT):
-    buffSize = 6553
+    buffSize = 65535
     server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server.bind((HOST, PORT))
 
