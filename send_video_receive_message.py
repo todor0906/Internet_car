@@ -4,6 +4,16 @@ import socket
 import struct
 import time
 import threading
+import serial
+import serial.tools.list_ports
+import sys
+
+def find_arduino_serial_port(baud_rate=9600, timeout=2):
+    ports = list(serial.tools.list_ports.comports())
+    for port in ports:
+        if "Arduino" in port.description or "Arduino" in port.manufacturer:
+            return port.device
+    return None
 
 def find_available_camera(max_checks=10):
     for i in range(max_checks):
@@ -63,7 +73,15 @@ def receive_udp_message(listen_ip, listen_port):
     while True:
         data, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
         print(f"Received message: {data.decode()} from {addr}")
+        ser.write({data.decode()})
 
+arduino_port = find_arduino_serial_port()
+if arduino_port:
+    print(f"Arduino found at {arduino_port}")
+else:
+    sys.exit("Arduino not found. Please check your connection.")
+ser = serial.Serial(arduino_port, 9600)
+time.sleep(2)
 # Video sending configuration
 HOST = '192.168.191.118'  # The receiver's IP address
 PORT = 1189
