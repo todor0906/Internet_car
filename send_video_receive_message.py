@@ -72,8 +72,10 @@ def receive_udp_message(listen_ip, listen_port):
     print(f"Listening for UDP messages on {listen_ip}:{listen_port}...")
     while True:
         data, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
-        print(f"Received message: {data.decode()} from {addr}")
-        ser.write({data.decode()})
+        message=data.decode()
+        print(f"Received message: {message} from {addr}")
+        ser_message = message.encode('utf-8')
+        ser.write(ser_message)
 
 arduino_port = find_arduino_serial_port()
 if arduino_port:
