@@ -4,7 +4,7 @@ import socket
 import struct
 import threading
 import tkinter as tk
-
+current_gear=1
 def receive_video(HOST, PORT):
     buffSize = 65535
     server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -46,11 +46,13 @@ def receive_video(HOST, PORT):
         server.close()
         cv2.destroyAllWindows()
 
-def send_udp_message(message, server_ip, server_port):
+def send_udp_message(direction, server_ip, server_port):
+    gear = str(current_gear)
+    message = gear + direction
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
+    print(f"curent gear:{gear}")
     try:
-        sock.sendto(message.encode(), (server_ip, server_port))
+        # sock.sendto(message.encode(), (server_ip, server_port))
         print(message)
     except Exception as e:
         print(f"Error sending message: {e}")
@@ -62,23 +64,36 @@ def video_receiver_thread():
     PORT = 1189
     receive_video(HOST, PORT)
 
-def message_sender(message):
+def message_sender(direction):
     server_ip = "192.168.191.247"  # Replace with the receiver's IP address
     server_port = 12345  # Replace with the receiver's port
-    send_udp_message(message, server_ip, server_port)
+    send_udp_message(direction, server_ip, server_port)
 
+def change_gear(gear):
+    global current_gear
+    if gear == 'f':
+        if(current_gear < 3):
+            current_gear = current_gear + 1
+    if gear == 's':
+        if(current_gear > 1):
+            current_gear = current_gear - 1
+    
 root = tk.Tk()
 frame = tk.Frame(root)
 frame.pack()
 bottomframe = tk.Frame(root)
 bottomframe.pack(side=tk.BOTTOM)
-upbutton = tk.Button(frame, text='↑', fg='black', command=lambda:message_sender("up"))
+speed_up_button = tk.Button(frame, text='Speed Up', fg='green', command=lambda: change_gear('f'))
+speed_up_button.pack(side=tk.LEFT)
+speed_down_button = tk.Button(frame, text='Speed Down', fg='red', command=lambda: change_gear('s'))
+speed_down_button.pack(side=tk.RIGHT)
+upbutton = tk.Button(frame, text='↑', fg='black', command=lambda:message_sender('u'))
 upbutton.pack()
-leftbutton = tk.Button(bottomframe, text='←', fg='black', command=lambda:message_sender("left"))
+leftbutton = tk.Button(bottomframe, text='←', fg='black', command=lambda:message_sender('l'))
 leftbutton.pack(side=tk.LEFT)
-downbutton = tk.Button(bottomframe, text='↓', fg='black', command=lambda:message_sender("down"))
+downbutton = tk.Button(bottomframe, text='↓', fg='black', command=lambda:message_sender('d'))
 downbutton.pack(side=tk.LEFT)
-rightbutton = tk.Button(bottomframe, text='→', fg='black', command=lambda:message_sender("right"))
+rightbutton = tk.Button(bottomframe, text='→', fg='black', command=lambda:message_sender('r'))
 rightbutton.pack(side=tk.LEFT)
 video_receiver_thread()
-
+root.mainloop()
