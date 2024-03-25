@@ -7,7 +7,10 @@ import socket
 import struct
 import threading
 import queue
-
+video_ip = '0.0.0.0'
+video_port = 1189
+message_ip = "192.168.191.247"
+message_port = 12345
 frame_queue = queue.Queue()
 current_gear = 1
 
@@ -63,32 +66,50 @@ def send_udp_message(direction, server_ip, server_port):
     finally:
         sock.close()
 
-def change_gear(gear):
+def change_gear(gear,gear_var):
     global current_gear
     if gear == 'f' and current_gear < 3:
         current_gear += 1
     elif gear == 's' and current_gear > 1:
         current_gear -= 1
+    gear_var.set('Gear: {}'.format(current_gear))
 
 def setup_gui():
     root = tk.Tk()
     image_label = ttk.Label(root)
     image_label.pack()
 
-    frame = tk.Frame(root)
-    frame.pack(side=tk.TOP)
-    ttk.Button(frame, text='Speed Up', command=lambda: change_gear('f')).pack(side=tk.LEFT)
-    ttk.Button(frame, text='Speed Down', command=lambda: change_gear('s')).pack(side=tk.RIGHT)
-    ttk.Button(root, text='↑', command=lambda: send_udp_message('u', "192.168.191.247", 12345)).pack()
-    ttk.Button(root, text='←', command=lambda: send_udp_message('l', "192.168.191.247", 12345)).pack(side=tk.LEFT)
-    ttk.Button(root, text='↓', command=lambda: send_udp_message('d', "192.168.191.247", 12345)).pack(side=tk.LEFT)
-    ttk.Button(root, text='→', command=lambda: send_udp_message('r', "192.168.191.247", 12345)).pack(side=tk.LEFT)
+    gear_var = tk.StringVar()
+    gear_var.set('Gear: 1')  # Initial gear
+    gear_label = ttk.Label(root, textvariable=gear_var)
+    gear_label.pack()
 
-    threading.Thread(target=receive_video, args=('0.0.0.0', 1189), daemon=True).start()
+    button_frame1 = ttk.Frame(root)
+    button_frame1.pack()
+    ttk.Button(button_frame1, text='↑', command=lambda: send_udp_message('u', message_ip, message_port)).pack()
+
+    button_frame2 = ttk.Frame(root)
+    button_frame2.pack()
+    ttk.Button(button_frame2, text='←', command=lambda: send_udp_message('l', message_ip, message_port)).pack(side=tk.LEFT)
+    ttk.Button(button_frame2, text='↓', command=lambda: send_udp_message('d', message_ip, message_port)).pack(side=tk.LEFT)
+    ttk.Button(button_frame2, text='→', command=lambda: send_udp_message('r', message_ip, message_port)).pack(side=tk.LEFT)
+
+    button_frame3 = ttk.Frame(root)
+    button_frame3.pack()
+    ttk.Button(button_frame3, text='Gear Up', command=lambda: change_gear('f', gear_var)).pack(side=tk.LEFT)
+    ttk.Button(button_frame3, text='Gear Down', command=lambda: change_gear('s', gear_var)).pack(side=tk.RIGHT)
+
+    root.bind('w', lambda event: send_udp_message('u', message_ip, message_port))
+    root.bind('a', lambda event: send_udp_message('l', message_ip, message_port))
+    root.bind('s', lambda event: send_udp_message('d', message_ip, message_port))
+    root.bind('d', lambda event: send_udp_message('r', message_ip, message_port))
+    root.bind('<Up>', lambda event: change_gear('f', gear_var))
+    root.bind('<Down>', lambda event: change_gear('s', gear_var))
+
+    threading.Thread(target=receive_video, args=(video_ip, video_port), daemon=True).start()
 
     update_image(image_label)
-
     root.mainloop()
-
+    return gear_var
 if __name__ == "__main__":
     setup_gui()
