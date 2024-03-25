@@ -8,11 +8,9 @@ import struct
 import threading
 import queue
 
-# Initialize a thread-safe queue
 frame_queue = queue.Queue()
 current_gear = 1
 
-# Function to receive video frames and decode them
 def receive_video(HOST, PORT):
     buffSize = 65535
     server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -43,16 +41,14 @@ def receive_video(HOST, PORT):
     finally:
         server.close()
 
-# Function to update the Tkinter label with a new image from the queue
 def update_image(label):
     if not frame_queue.empty():
         frame = frame_queue.get()
         cv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         pil_image = Image.fromarray(cv_image)
         imgtk = ImageTk.PhotoImage(image=pil_image)
-        label.imgtk = imgtk  # This line is necessary to prevent the imgtk variable from being garbage collected
+        label.imgtk = imgtk  
         label.configure(image=imgtk)
-    # Schedule the update_image function to be called again after 10ms
     label.after(10, lambda: update_image(label))
 
 def send_udp_message(direction, server_ip, server_port):
@@ -79,22 +75,17 @@ def setup_gui():
     image_label = ttk.Label(root)
     image_label.pack()
 
-    # Buttons for controlling the gear
     frame = tk.Frame(root)
     frame.pack(side=tk.TOP)
     ttk.Button(frame, text='Speed Up', command=lambda: change_gear('f')).pack(side=tk.LEFT)
     ttk.Button(frame, text='Speed Down', command=lambda: change_gear('s')).pack(side=tk.RIGHT)
-
-    # Buttons for sending direction commands
     ttk.Button(root, text='↑', command=lambda: send_udp_message('u', "192.168.191.247", 12345)).pack()
     ttk.Button(root, text='←', command=lambda: send_udp_message('l', "192.168.191.247", 12345)).pack(side=tk.LEFT)
     ttk.Button(root, text='↓', command=lambda: send_udp_message('d', "192.168.191.247", 12345)).pack(side=tk.LEFT)
     ttk.Button(root, text='→', command=lambda: send_udp_message('r', "192.168.191.247", 12345)).pack(side=tk.LEFT)
 
-    # Start the video receiving thread
     threading.Thread(target=receive_video, args=('0.0.0.0', 1189), daemon=True).start()
 
-    # Start the update loop for the image label
     update_image(image_label)
 
     root.mainloop()
