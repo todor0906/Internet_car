@@ -103,13 +103,13 @@ def send_diagonal_command():
     elif 's' in pressed_keys and 'd' in pressed_keys:
         send_udp_message('dr', message_ip, message_port)
     elif 'w' in pressed_keys:
-        send_udp_message('u', message_ip, message_port)
+        send_udp_message('u0', message_ip, message_port)
     elif 'a' in pressed_keys:
-        send_udp_message('l', message_ip, message_port)
+        send_udp_message('0l', message_ip, message_port)
     elif 's' in pressed_keys:
-        send_udp_message('d', message_ip, message_port)
+        send_udp_message('d0', message_ip, message_port)
     elif 'd' in pressed_keys:
-        send_udp_message('r', message_ip, message_port)
+        send_udp_message('0r', message_ip, message_port)
 
 def setup_gui():
     root = tk.Tk()
