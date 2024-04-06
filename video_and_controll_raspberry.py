@@ -8,17 +8,15 @@ import struct
 import threading
 import queue
 
-# Network configuration variables
 video_ip = '0.0.0.0'
 video_port = 1189
 message_ip = "192.168.191.247"
 message_port = 12345
 
-# Initialize the frame queue and current gear
 frame_queue = queue.Queue()
 current_gear = 1
 
-# Track pressed keys for diagonal movements
+
 pressed_keys = set()
 
 def receive_video(HOST, PORT):
@@ -136,22 +134,27 @@ def setup_gui():
     ttk.Button(button_frame3, text='Gear Up', command=lambda: change_gear('f', gear_var)).pack(side=tk.LEFT)
     ttk.Button(button_frame3, text='Gear Down', command=lambda: change_gear('s', gear_var)).pack(side=tk.RIGHT)
 
-    # Bind the key press and key release events to the root window
     root.bind('<KeyPress>', handle_key_press)
     root.bind('<KeyRelease>', handle_key_release)
     
-    # Bind the arrow keys for gear change
     root.bind('<Up>', lambda event: change_gear('f', gear_var))
     root.bind('<Down>', lambda event: change_gear('s', gear_var))
 
-    # Start the thread to receive video frames
     threading.Thread(target=receive_video, args=(video_ip, video_port), daemon=True).start()
-
-    # Initiate the image update loop
     update_image(image_label)
 
-    # Start the tkinter main loop
     root.mainloop()
+def key_press(button, pressed_keys, key):
+    pressed_keys.add(key)
+    update_direction(pressed_keys)
+
+def key_release(pressed_keys, key):
+    pressed_keys.discard(key)
+    update_direction(pressed_keys)
+
+def update_direction(pressed_keys):
+    direction = ''.join(sorted(pressed_keys))  
+    send_udp_message(direction, message_ip, message_port)
 
 if __name__ == "__main__":
     setup_gui()
