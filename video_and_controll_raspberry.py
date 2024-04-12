@@ -7,13 +7,15 @@ import socket
 import struct
 import threading
 import queue
+import time
 
 video_ip = '0.0.0.0'
 video_port = 1189
-message_ip = "192.168.191.247"
+message_ip = "10.147.18.247"
 message_port = 12345
 
 frame_queue = queue.Queue()
+decoded_frame_queue = queue.Queue(maxsize=2)
 current_gear = 1
 
 
@@ -25,7 +27,6 @@ def receive_video(HOST, PORT):
     server.bind((HOST, PORT))
     print('Waiting for video frames...')
 
-    previous_timestamp = 0
     try:
         while True:
             packet, _ = server.recvfrom(buffSize)
@@ -35,30 +36,60 @@ def receive_video(HOST, PORT):
             timestamp, size = struct.unpack('di', packet[:12])
             data = packet[12:]
 
-            if timestamp <= previous_timestamp or len(data) != size:
+            if len(data) != size:
                 continue
 
-            previous_timestamp = timestamp
-
-            frame = np.frombuffer(data, dtype=np.uint8)
-            frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)
-
-            if frame is not None:
-                frame_queue.put(frame)
+            frame_queue.put((timestamp, data))
     except Exception as e:
         print(f"General error: {e}")
     finally:
         server.close()
 
+def decode_frames():
+    last_processed_time = time.time()
+    frame_skip_threshold = 10  # Initial threshold for frame queue size
+    frame_processing_limit = 1  # Time limit in seconds to process a frame
+
+    while True:
+        current_time = time.time()
+
+        # Dynamic adjustment of frame skipping based on processing performance
+        if frame_queue.qsize() > frame_skip_threshold or (current_time - last_processed_time < frame_processing_limit and frame_queue.qsize() > 1):
+            print("Skipping frame to catch up...")
+            frame_queue.get()  # Skip this frame
+            continue
+
+        if not frame_queue.empty():
+            timestamp, data = frame_queue.get()
+
+            frame = np.frombuffer(data, dtype=np.uint8)
+            frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)
+
+            if frame is not None:
+                if decoded_frame_queue.full():
+                    decoded_frame_queue.get_nowait()  # Remove the oldest frame
+                decoded_frame_queue.put(frame)
+
+            last_processed_time = time.time()
+
+        # Adjust frame_skip_threshold based on processing performance
+        if frame_queue.qsize() < 5:
+            frame_skip_threshold = max(10, frame_skip_threshold - 1)
+        else:
+            frame_skip_threshold = min(20, frame_skip_threshold + 1)
+
+
 def update_image(label):
-    if not frame_queue.empty():
-        frame = frame_queue.get()
-        cv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        pil_image = Image.fromarray(cv_image)
-        imgtk = ImageTk.PhotoImage(image=pil_image)
-        label.imgtk = imgtk
-        label.configure(image=imgtk)
-    label.after(10, lambda: update_image(label))
+    try:
+        if not decoded_frame_queue.empty():
+            frame = decoded_frame_queue.get()
+            cv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            pil_image = Image.fromarray(cv_image)
+            imgtk = ImageTk.PhotoImage(image=pil_image)
+            label.imgtk = imgtk  # Prevent garbage collection
+            label.configure(image=imgtk)
+    finally:
+        label.after(10, lambda: update_image(label))
 
 def send_udp_message(direction, server_ip, server_port):
     global current_gear
@@ -91,7 +122,9 @@ def handle_key_release(event):
     if event.keysym.lower() in pressed_keys:
         pressed_keys.remove(event.keysym.lower())
 
+
 def send_diagonal_command():
+
     if 'w' in pressed_keys and 'd' in pressed_keys:
         send_udp_message('ur', message_ip, message_port)
     elif 'w' in pressed_keys and 'a' in pressed_keys:
@@ -108,6 +141,7 @@ def send_diagonal_command():
         send_udp_message('d0', message_ip, message_port)
     elif 'd' in pressed_keys:
         send_udp_message('0r', message_ip, message_port)
+
 
 def setup_gui():
     root = tk.Tk()
@@ -141,8 +175,9 @@ def setup_gui():
     root.bind('<Down>', lambda event: change_gear('s', gear_var))
 
     threading.Thread(target=receive_video, args=(video_ip, video_port), daemon=True).start()
+    threading.Thread(target=decode_frames, daemon=True).start()
     update_image(image_label)
-
+    
     root.mainloop()
 def key_press(button, pressed_keys, key):
     pressed_keys.add(key)
@@ -153,7 +188,7 @@ def key_release(pressed_keys, key):
     update_direction(pressed_keys)
 
 def update_direction(pressed_keys):
-    direction = ''.join(sorted(pressed_keys))  
+    direction = ''.join(sorted(pressed_keys))
     send_udp_message(direction, message_ip, message_port)
 
 if __name__ == "__main__":
