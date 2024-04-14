@@ -47,8 +47,8 @@ def receive_video(HOST, PORT):
 
 def decode_frames():
     last_processed_time = time.time()
-    frame_skip_threshold = 10  # Initial threshold for frame queue size
-    frame_processing_limit = 1  # Time limit in seconds to process a frame
+    frame_skip_threshold = 10  #
+    frame_processing_limit = 1  
 
     while True:
         current_time = time.time()
