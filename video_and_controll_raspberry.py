@@ -14,7 +14,7 @@ video_port = 1189
 message_ip = "10.147.18.247"
 message_port = 12345
 
-frame_queue = queue.Queue()
+frame_queue = queue.Queue() #FIFO
 decoded_frame_queue = queue.Queue(maxsize=2)
 current_gear = 1
 
@@ -33,8 +33,8 @@ def receive_video(HOST, PORT):
             if len(packet) < 12:
                 continue
 
-            timestamp, size = struct.unpack('di', packet[:12])
-            data = packet[12:]
+            timestamp, size = struct.unpack('di', packet[:12]) # 8 bytes and 4 bytes - timestamp and size of the frame
+            data = packet[12:] #Rest of the packet
 
             if len(data) != size:
                 continue
@@ -47,8 +47,8 @@ def receive_video(HOST, PORT):
 
 def decode_frames():
     last_processed_time = time.time()
-    frame_skip_threshold = 10  #
-    frame_processing_limit = 1  
+    frame_skip_threshold = 10  # Number of frames in the queue before skipping
+    frame_processing_limit = 1  # processing time
 
     while True:
         current_time = time.time()
