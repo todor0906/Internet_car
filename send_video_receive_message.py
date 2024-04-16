@@ -33,7 +33,6 @@ def send_video(HOST, PORT):
     server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     capture = cv2.VideoCapture(camera_index)
 
-    # Adjust the camera resolution if necessary
     capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
@@ -49,7 +48,6 @@ def send_video(HOST, PORT):
             _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 50])
             data = buffer.tobytes()
 
-            # Timestamp the frame
             timestamp = time.time()
             timestamp_data = struct.pack('d', timestamp)
 
@@ -71,7 +69,7 @@ def receive_udp_message(listen_ip, listen_port):
 
     print(f"Listening for UDP messages on {listen_ip}:{listen_port}...")
     while True:
-        data, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
+        data, addr = sock.recvfrom(1024) 
         message=data.decode()
         print(f"Received message: {message} from {addr}")
         ser_message = message.encode('utf-8')
@@ -84,17 +82,15 @@ else:
     sys.exit("Arduino not found. Please check your connection.")
 ser = serial.Serial(arduino_port, 9600)
 time.sleep(2)
-# Video sending configuration
-HOST = '192.168.191.118'  # The receiver's IP address
+# Video 
+HOST = '10.147.18.118' 
 PORT = 1189
 
-# Message receiving configuration
-listen_ip = "0.0.0.0"  # Listen on all available IPs
-listen_port = 12345  # The port to listen for incoming messages
+# Message 
+listen_ip = "0.0.0.0"  
+listen_port = 12345  
 
-# Start the video sending in a separate thread
 video_thread = threading.Thread(target=send_video, args=(HOST, PORT))
 video_thread.start()
 
-# Start the message receiving in the main thread
 receive_udp_message(listen_ip, listen_port)
